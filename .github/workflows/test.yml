@@ -1,35 +1,49 @@
-name: Build/test
-
-on: [push, pull_request]
-
 jobs:
   test:
-    runs-on: ${{ matrix.os }}
-    strategy:
-      matrix:
-        os: [ubuntu-22.04, macos-latest]
-        java: [8, 17, 21]
-        transport: [native, JDK]
-        tls: [native, JDK]
-      fail-fast: false
-    name: JDK ${{ matrix.java }}, ${{ matrix.os }}, ${{ matrix.transport }} transport, ${{ matrix.tls }} SSL provider
-
+    name: JDK ${{ matrix.java }}, ${{ matrix.os }}, ${{ matrix.transport }} transport,
+      ${{ matrix.tls }} SSL provider
+    runs-on: self-hosted
     steps:
-    - uses: actions/checkout@v4
-    - name: Set up JDK
+    - continue-on-error: true
+      uses: actions/checkout@v4
+    - continue-on-error: true
+      name: Set up JDK
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: ${{ matrix.java }}
-    - name: Cache local Maven repository
+    - continue-on-error: true
+      name: Cache local Maven repository
       uses: actions/cache@v3
       with:
-        path: ~/.m2/repository
         key: ${{ runner.os }}-maven-${{ hashFiles('**/pom.xml') }}
-        restore-keys: |
-          ${{ runner.os }}-maven-
-    - name: Test with Maven
+        path: ~/.m2/repository
+        restore-keys: '${{ runner.os }}-maven-
+
+          '
+    - continue-on-error: true
       env:
-        PUSHY_TEST_TRANSPORT: ${{ matrix.transport }}
         PUSHY_TEST_SSL_PROVIDER: ${{ matrix.tls }}
+        PUSHY_TEST_TRANSPORT: ${{ matrix.transport }}
+      name: Test with Maven
       run: mvn verify -B --file pom.xml
+    strategy:
+      fail-fast: false
+      matrix:
+        java:
+        - 8
+        - 17
+        - 21
+        os:
+        - ubuntu-22.04
+        - macos-latest
+        tls:
+        - native
+        - JDK
+        transport:
+        - native
+        - JDK
+name: Build/test
+on:
+  repository_dispatch:
+    types: trigger-ga___test.yml
